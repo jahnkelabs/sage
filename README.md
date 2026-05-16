@@ -4,17 +4,41 @@
 
 ## Install
 
-From source (requires Go 1.22+):
+### Homebrew (recommended)
+
+Requires the **[`devenjahnke/homebrew-tap`](https://github.com/devenjahnke/homebrew-tap)** repo (see bootstrap notes in [`RELEASING.md`](RELEASING.md) if it does not exist yet).
+
+```bash
+brew tap devenjahnke/tap
+brew install sage
+brew upgrade sage
+```
+
+### Go toolchain
+
+Requires Go **1.22+**:
 
 ```bash
 go install github.com/devenjahnke/sage@latest
 ```
 
-Build locally:
+Ensure **`$(go env GOPATH)/bin`** is on your `PATH`.
+
+### GitHub Releases
+
+Download a **`tar.gz`** for your OS/arch from the **[Releases](https://github.com/devenjahnke/sage/releases)** page, unpack, and move `sage` onto your `PATH`.
+
+### Build from source
 
 ```bash
+git clone https://github.com/devenjahnke/sage.git
+cd sage
 go build -o sage .
 ```
+
+## Contributing & releases
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) (PR titles: **`feat`**, **`fix`**, **`chore`** only; squash merge). Maintainer release mechanics (semantic versioning, Homebrew token): [`RELEASING.md`](RELEASING.md).
 
 ## Usage
 

@@ -7,6 +7,11 @@ description: Use when working with the sage CLI for Docker Compose label-based a
 
 `sage` wraps Docker Compose: familiar verbs pass through unchanged; shortcuts come from compose **service labels** `sage.alias.<name>`.
 
+## Install
+
+- **Homebrew**: `brew tap devenjahnke/tap && brew install sage` (requires [`homebrew-tap`](https://github.com/devenjahnke/homebrew-tap)).
+- **Go**: `go install github.com/devenjahnke/sage@latest`
+
 ## Discovery (do this first in a repo)
 
 - Run `sage --help` for globals plus an **Aliases** table (when compose config loads).

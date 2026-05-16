@@ -1,0 +1,49 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+project_name: sage
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    main: .
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.CommitDate}}
+
+archives:
+  - format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- .Arch }}
+
+checksum:
+  name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
+
+brews:
+  - name: sage
+    homepage: https://github.com/devenjahnke/sage
+    description: Docker Compose helper with sage.alias.* label shortcuts
+    license: MIT
+    repository:
+      owner: devenjahnke
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
+    commit_msg_template: "brew: bump sage to {{ .Tag }}"
+    commit_author:
+      name: github-actions[bot]
+      email: github-actions[bot]@users.noreply.github.com
