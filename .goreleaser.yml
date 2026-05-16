@@ -35,6 +35,7 @@ checksum:
 
 brews:
   - name: sage
+    directory: Formula
     homepage: https://github.com/jahnkelabs/sage
     description: Docker Compose helper with sage.alias.* label shortcuts
     license: MIT
