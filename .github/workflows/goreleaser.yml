@@ -23,8 +23,8 @@ jobs:
       - uses: actions/create-github-app-token@v2
         id: tap-token
         with:
-          app-id: ${{ secrets.GH_APP_ID }}
-          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          app-id: ${{ vars.HOMEBREW_TAP_GH_APP_ID }}
+          private-key: ${{ secrets.HOMEBREW_TAP_GH_APP_SECRET_KEY }}
           owner: jahnkelabs
           repositories: |
             homebrew-tap

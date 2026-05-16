@@ -18,7 +18,20 @@ Because the repo name is **`homebrew-tap`**, Homebrew exposes it as **`jahnkelab
 
 ## Publishers (generic pattern)
 
-Useful when another CLI repo wants its own formula on **this** tap.
+Useful when another project wants its own formula committed to **this** tap from CI.
+
+### Shared GitHub App: **HomebrewTap**
+
+The **`jahnkelabs`** organization already runs a GitHub App named **`HomebrewTap`** that is installed with access **only** to **`jahnkelabs/homebrew-tap`** (least privilege). Upstream repos do **not** create a separate app—they reuse this installation and mint short-lived tokens in Actions.
+
+Org-wide credentials for Actions:
+
+| Kind | Name | Purpose |
+|------|------|--------|
+| **Organization variable** | **`HOMEBREW_TAP_GH_APP_ID`** | Numeric GitHub App ID for **HomebrewTap** |
+| **Organization secret** | **`HOMEBREW_TAP_GH_APP_SECRET_KEY`** | PEM private key for **HomebrewTap** (`BEGIN … END` block) |
+
+**Repository access:** For each variable and secret, org admins set visibility under **Organization → Settings → Secrets and variables → Actions** so **every repository that publishes formulas here** can read them—typically **Selected repositories** (add each upstream repo) or **All repositories**, depending on policy. Without access, workflows see empty values and token minting fails.
 
 ### Tap layout
 
@@ -31,17 +44,29 @@ Configure **[brews](https://goreleaser.com/customization/homebrew-taps/)** with:
 - **`repository.owner`** / **`repository.name`** pointing at **`jahnkelabs/homebrew-tap`** (and **`repository.branch`** if not **`main`**).
 - **`repository.token`** set from CI (installation token below)—not **`GITHUB_TOKEN`** from the upstream repo alone.
 
-### Cross-repo authentication (recommended)
+### Minting a tap token in Actions
 
-1. Create a **GitHub App** with **Contents: Read and write** on **this tap repo** only; install it on **`jahnkelabs`** with access **only** to **`homebrew-tap`**.
-2. Store **`GH_APP_ID`** and **`GH_APP_PRIVATE_KEY`** as **organization secrets** on **`jahnkelabs`**, with **repository access** granted to the **upstream** repo that runs CI (for sage: **`jahnkelabs/sage`**).
-3. In that upstream workflow, use **`actions/create-github-app-token`** with **`owner: jahnkelabs`** and **`repositories: homebrew-tap`**, then pass **`steps.<id>.outputs.token`** into GoReleaser as **`TAP_GITHUB_TOKEN`** (or whatever env your **`brews[].repository.token`** reads).
+Use **`actions/create-github-app-token`** with the shared org credentials, then pass **`steps.<id>.outputs.token`** into GoReleaser as **`TAP_GITHUB_TOKEN`** (or whatever env **`brews[].repository.token`** reads):
 
-See **[`RELEASING.md`](https://github.com/jahnkelabs/sage/blob/main/RELEASING.md)** on **`jahnkelabs/sage`** for the concrete sage checklist.
+```yaml
+- uses: actions/create-github-app-token@v2
+  id: tap-token
+  with:
+    app-id: ${{ vars.HOMEBREW_TAP_GH_APP_ID }}
+    private-key: ${{ secrets.HOMEBREW_TAP_GH_APP_SECRET_KEY }}
+    owner: jahnkelabs
+    repositories: |
+      homebrew-tap
+    permission-contents: write
+```
+
+### Sage-specific notes
+
+See **[`RELEASING.md`](https://github.com/jahnkelabs/sage/blob/main/RELEASING.md)** on **`jahnkelabs/sage`** for how **sage** wires GoReleaser on tag pushes.
 
 ### Alternatives
 
-Fine-grained or classic PATs can push here but rotate poorly compared with installation tokens—prefer a GitHub App.
+Fine-grained or classic PATs can push here but rotate poorly compared with installation tokens—prefer the shared app flow above.
 
 ### Branch protection
 

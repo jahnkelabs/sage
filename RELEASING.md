@@ -43,26 +43,27 @@ Repositories live under **`jahnkelabs`**: **`jahnkelabs/sage`** and **`jahnkelab
 git remote set-url origin https://github.com/jahnkelabs/sage.git
 ```
 
-### One-time setup: GitHub App + organization secrets
+### One-time setup: shared GitHub App **HomebrewTap**
 
 Cross-repo formula commits use a **GitHub App installation token** minted in Actions ([`actions/create-github-app-token`](https://github.com/actions/create-github-app-token)), not the default **`GITHUB_TOKEN`**, and not a long-lived PAT.
 
-1. **Create a GitHub App** (recommended: owned by **`jahnkelabs`** org; follow org policy).
-2. Grant the app repository permission **Contents: Read and write** (and **Metadata** read-only as required by GitHub).
-3. **Install** the app on **`jahnkelabs`** and allow it to access **`homebrew-tap`** only (least privilege).
-4. Note the **App ID** and generate a **private key** (PEM) from the App settings.
-5. In the org: **Settings → Secrets and variables → Actions** (organization level), create:
-   - **`GH_APP_ID`** — the numeric App ID (stored as an organization secret).
-   - **`GH_APP_PRIVATE_KEY`** — full PEM contents.
+The **`jahnkelabs`** org operates one GitHub App named **`HomebrewTap`**, installed on **`homebrew-tap`** only. Credentials are stored once at the organization:
 
-   Under **Repository access** for each secret, choose **Selected repositories** and include **`jahnkelabs/sage`** so workflow runs there can read them.
+| Kind | Name |
+|------|------|
+| Organization **variable** | **`HOMEBREW_TAP_GH_APP_ID`** |
+| Organization **secret** | **`HOMEBREW_TAP_GH_APP_SECRET_KEY`** (full PEM private key) |
 
-   Org owners can also use the CLI (repo slug is **`sage`** within **`jahnkelabs`**):
+Org admins must grant **`jahnkelabs/sage`** (and any other publishing repo) **repository access** to both the variable and the secret under **Organization → Settings → Secrets and variables → Actions**, or widen visibility per policy.
 
-   ```bash
-   gh secret set GH_APP_ID --org jahnkelabs --repos sage --body "$GH_APP_ID"
-   gh secret set GH_APP_PRIVATE_KEY --org jahnkelabs --repos sage < path/to/app-private-key.pem
-   ```
+Example CLI for **selected** repos (`repo` is the short name inside **`jahnkelabs`**):
+
+```bash
+gh variable set HOMEBREW_TAP_GH_APP_ID --org jahnkelabs --repos sage --body "$HOMEBREW_TAP_GH_APP_ID"
+gh secret set HOMEBREW_TAP_GH_APP_SECRET_KEY --org jahnkelabs --repos sage < path/to/homebrew-tap-app.pem
+```
+
+See **[`packaging/homebrew-tap/README.md`](packaging/homebrew-tap/README.md)** for publisher-facing docs shared with **`github.com/jahnkelabs/homebrew-tap`**.
 
 The GoReleaser workflow passes the minted token to GoReleaser as **`TAP_GITHUB_TOKEN`** (see [`.goreleaser.yml`](.goreleaser.yml)).
 
