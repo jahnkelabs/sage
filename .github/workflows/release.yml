@@ -3,6 +3,11 @@ name: Release
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: sage-release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -10,8 +15,41 @@ permissions:
   pull-requests: write
 
 jobs:
-  semantic-release:
+  assert-dispatch-ref:
     runs-on: ubuntu-latest
+    steps:
+      - name: Disallow unsupported manual refs (UI still lists all refs)
+        run: |
+          set -euo pipefail
+          if [[ "${EVENT_NAME}" != "workflow_dispatch" ]]; then
+            exit 0
+          fi
+
+          if [[ "${GIT_REF}" == "refs/heads/main" ]]; then
+            exit 0
+          fi
+
+          if [[ "${GIT_REF}" != refs/tags/v* ]]; then
+            echo "::error title=Manual run::Use branch \`main\` or a release tag (\`refs/tags/v…\`). Other refs are refused."
+            exit 1
+          fi
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          GIT_REF: ${{ github.ref }}
+
+  semantic-release:
+    needs: assert-dispatch-ref
+    # Run only on branch `main`; skip when you manually run this workflow against a release tag ref.
+    if: >-
+      ${{
+        needs.assert-dispatch-ref.result == 'success'
+        && github.ref == 'refs/heads/main'
+        && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+      }}
+    runs-on: ubuntu-latest
+    outputs:
+      new_release_published: ${{ steps.semantic.outputs.new_release_published }}
+      new_release_git_tag: ${{ steps.semantic.outputs.new_release_git_tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -34,7 +72,128 @@ jobs:
       - run: npm ci
 
       - uses: cycjimmy/semantic-release-action@v4
+        id: semantic
         with:
           semantic_version: 24
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Semantic-release creates tags/releases with GITHUB_TOKEN, which does not
+  # reliably trigger separate workflows — GoReleaser runs here instead.
+  resolve-release-tag:
+    needs:
+      - assert-dispatch-ref
+      - semantic-release
+    # Run after a successful `main` semantics pass, OR when Actions dispatches against `refs/tags/v*`.
+    if: >-
+      ${{ 
+        always() 
+        && !cancelled() 
+        && needs.assert-dispatch-ref.result == 'success'
+        && ( 
+             (github.event_name == 'workflow_dispatch' && startsWith(github.ref, 'refs/tags/v')) 
+          || needs.semantic-release.result == 'success' 
+        ) 
+      }}
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.resolve.outputs.skip }}
+      tag: ${{ steps.resolve.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Decide semver tag for GoReleaser
+        id: resolve
+        run: |
+          set -euo pipefail
+
+          published="${NEW_RELEASE_PUBLISHED}"
+          new_tag="${NEW_RELEASE_GIT_TAG}"
+
+          should=false
+          tag=""
+
+          if [[ "${GITHUB_EVENT}" == "workflow_dispatch" ]] && [[ "${GITHUB_REF}" =~ ^refs/tags/v ]]; then
+            should=true
+            tag="${GITHUB_REF_NAME}"
+          elif [[ "${GITHUB_EVENT}" == "push" || "${GITHUB_EVENT}" == "workflow_dispatch" ]] && [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+            if [[ "${published}" == "true" && -n "${new_tag}" ]]; then
+              should=true
+              tag="${new_tag}"
+            elif [[ "${RUN_ATTEMPT}" -gt 1 ]]; then
+              # Re-run workflow after semantic-release tagged HEAD but GoReleaser failed earlier.
+              head_sha="$(git rev-parse HEAD)"
+              tag="$(git tag -l 'v*' --points-at "${head_sha}" --sort=-version:refname | head -1 || true)"
+              if [[ -n "${tag}" ]]; then
+                should=true
+              fi
+            fi
+          fi
+
+          if [[ "${should}" != true ]]; then
+            echo "skip=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          if [[ -z "${tag}" ]]; then
+            echo "::error title=GoReleaser::No semver v* tag selected for build."
+            echo "skip=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          echo "skip=false" >> "${GITHUB_OUTPUT}"
+          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+        env:
+          NEW_RELEASE_PUBLISHED: ${{ needs.semantic-release.outputs.new_release_published || 'false' }}
+          NEW_RELEASE_GIT_TAG: ${{ needs.semantic-release.outputs.new_release_git_tag || '' }}
+          GITHUB_EVENT: ${{ github.event_name }}
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+
+  goreleaser:
+    needs:
+      - assert-dispatch-ref
+      - semantic-release
+      - resolve-release-tag
+    if: >-
+      ${{ 
+        always() 
+        && !cancelled() 
+        && needs.assert-dispatch-ref.result == 'success'
+        && needs.resolve-release-tag.result == 'success' 
+        && needs.resolve-release-tag.outputs.skip == 'false' 
+        && (needs.semantic-release.result == 'success'
+            || needs.semantic-release.result == 'skipped')
+      }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.resolve-release-tag.outputs.tag }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - uses: actions/create-github-app-token@v2
+        id: tap-token
+        with:
+          app-id: ${{ vars.HOMEBREW_TAP_GH_APP_ID }}
+          private-key: ${{ secrets.HOMEBREW_TAP_GH_APP_SECRET_KEY }}
+          owner: jahnkelabs
+          repositories: |
+            homebrew-tap
+          permission-contents: write
+
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAP_GITHUB_TOKEN: ${{ steps.tap-token.outputs.token }}
