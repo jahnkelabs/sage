@@ -1,0 +1,7 @@
+services:
+  api:
+    labels:
+      sage.alias.same: echo api
+  worker:
+    labels:
+      sage.alias.same: echo worker

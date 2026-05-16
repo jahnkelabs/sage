@@ -1,0 +1,12 @@
+{
+  "name": "sage-release",
+  "version": "0.0.0-development",
+  "private": true,
+  "description": "Semantic-release tooling for sage CLI (no runtime JS)",
+  "devDependencies": {
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/github": "^11.0.1",
+    "@semantic-release/release-notes-generator": "^14.0.3",
+    "semantic-release": "^24.2.0"
+  }
+}

@@ -1,0 +1,10 @@
+services:
+  api:
+    profiles:
+      - dev
+    labels:
+      sage.alias.migrate: bundle exec rake db:migrate
+      sage.alias.test: bundle exec rspec
+  worker:
+    labels:
+      sage.alias.work: rake jobs:work
