@@ -19,7 +19,9 @@ If **`main`** only receives **`chore`** commits since the last tag, semantic-rel
 ## GitHub Releases and binaries
 
 1. **semantic-release** creates **`vX.Y.Z`** and a GitHub Release with notes.
-2. **[GoReleaser](https://goreleaser.com/)** runs on **`push` tags `v*`** ([`.github/workflows/goreleaser.yml`](.github/workflows/goreleaser.yml)), attaches archives/checksums to that release, and updates the Homebrew formula.
+2. **[GoReleaser](https://goreleaser.com/)** runs in the **`goreleaser`** job appended to **`Release`** ([`.github/workflows/release.yml`](.github/workflows/release.yml)), only when semantic-release publishes a release. Tag pushes emitted with the default **`GITHUB_TOKEN`** **do not** start separate workflow runs ([GitHub limitation on chained workflows](https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow)), so GoReleaser is invoked from the **same workflow** immediately after tagging.
+
+Optional: [`.github/workflows/goreleaser.yml`](.github/workflows/goreleaser.yml) still listens for **`push` tags `v*`**—useful when a tag is pushed with credentials that propagate push events.
 
 GoReleaser must attach artifacts to the **existing** release for the tag (default behavior when the release already exists).
 

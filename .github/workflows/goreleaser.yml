@@ -1,3 +1,10 @@
+# semantic-release publishes tags using GITHUB_TOKEN, which does not trigger
+# other workflows—including this file. Builds from main use the GoReleaser job
+# in `.github/workflows/release.yml` chained after semantic-release succeeds.
+#
+# Kept so a `v*` tag pushed from automation that uses another credential (for
+# example manually from a PAT) still runs GoReleaser here.
+
 name: GoReleaser
 
 on:
