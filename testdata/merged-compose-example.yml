@@ -1,0 +1,10 @@
+services:
+  api:
+    profiles:
+      - dev
+    labels:
+      compose.alias.migrate: bundle exec rake db:migrate
+      compose.alias.test: bundle exec rspec
+  worker:
+    labels:
+      compose.alias.work: rake jobs:work
