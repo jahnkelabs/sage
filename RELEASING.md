@@ -18,12 +18,12 @@ If **`main`** only receives **`chore`** commits since the last tag, semantic-rel
 
 ## GitHub Releases and binaries
 
-1. **semantic-release** creates **`vX.Y.Z`** and a GitHub Release with notes.
-2. **[GoReleaser](https://goreleaser.com/)** runs in the **`goreleaser`** job appended to **`Release`** ([`.github/workflows/release.yml`](.github/workflows/release.yml)), only when semantic-release publishes a release. Tag pushes emitted with the default **`GITHUB_TOKEN`** **do not** start separate workflow runs ([GitHub limitation on chained workflows](https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow)), so GoReleaser is invoked from the **same workflow** immediately after tagging.
+1. **semantic-release** decides whether to publish **`vX.Y.Z`** / a GitHub Release; it is **no-op** when **`main`** has only **`chore`** since the last tag (idempotent **`semantic-release`** run).
+2. **[GoReleaser](https://goreleaser.com/)** runs in the **`goreleaser`** job of **`Release`** ([`.github/workflows/release.yml`](.github/workflows/release.yml)) after **`resolve-release-tag`** picks a semver **`v*`** tag. Routine **`main`** merges use the tag semantic-release **just produced** (`GITHUB_TOKEN` tag pushes cannot start other workflows reliably—see **[chained workflows](https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow)**).
+3. **Re-runs** (**Actions → Re-run workflow / jobs** on the same **`push`** run): when **`run_attempt`** is greater than **`1`**, GoReleaser runs only if a semver **`v*`** tag points at the workflow’s **`HEAD`** (recovery after **`goreleaser`** failed once **`semantic-release`** already tagged that commit; no-op chores without a release stay skipped).
+4. **`workflow_dispatch`**: run **`Release`** from the UI anytime. Turn on **“Run GoReleaser for newest v\* tag…”** (`force_goreleaser`) to rebuild binaries / Homebrew formula **without** a new semver release (`semantic-release` stays a no-op if there is nothing to publish).
 
-Optional: [`.github/workflows/goreleaser.yml`](.github/workflows/goreleaser.yml) still listens for **`push` tags `v*`**—useful when a tag is pushed with credentials that propagate push events.
-
-GoReleaser must attach artifacts to the **existing** release for the tag (default behavior when the release already exists).
+GoReleaser must attach artifacts to the **existing** GitHub Release for that tag (**`release --clean`**).
 
 ## Homebrew tap
 
@@ -67,7 +67,7 @@ gh secret set HOMEBREW_TAP_GH_APP_SECRET_KEY --org jahnkelabs --repos sage < pat
 
 See **[`packaging/homebrew-tap/README.md`](packaging/homebrew-tap/README.md)** for publisher-facing docs shared with **`github.com/jahnkelabs/homebrew-tap`**.
 
-The GoReleaser workflow passes the minted token to GoReleaser as **`TAP_GITHUB_TOKEN`** (see [`.goreleaser.yml`](.goreleaser.yml)).
+The **`Release`** job passes the minted tap token into GoReleaser as **`TAP_GITHUB_TOKEN`** (see [`.goreleaser.yml`](.goreleaser.yml)).
 
 If **`main`** uses **branch protection**, allow **`GITHUB_TOKEN`/Actions** (or an appropriate bypass actor) to **push tags** and publish releases—or semantic-release will fail when creating **`v*`** tags.
 

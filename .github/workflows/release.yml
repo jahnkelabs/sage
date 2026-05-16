@@ -3,6 +3,17 @@ name: Release
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      force_goreleaser:
+        description: Run GoReleaser for newest v* tag (no new semantic-release)
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: sage-release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -43,17 +54,84 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # Pushes/tags created via GITHUB_TOKEN do not trigger other workflows — so we
-  # cannot rely on `.github/workflows/goreleaser.yml`'s tag push listener alone.
-  goreleaser:
+  # Semantic-release creates tags/releases with GITHUB_TOKEN, which does not
+  # reliably trigger separate workflows — GoReleaser runs here instead.
+  resolve-release-tag:
     needs: semantic-release
-    if: ${{ needs.semantic-release.outputs.new_release_published == 'true' }}
+    if: needs.semantic-release.result == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.resolve.outputs.skip }}
+      tag: ${{ steps.resolve.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Decide semver tag for GoReleaser
+        id: resolve
+        run: |
+          set -euo pipefail
+
+          published="${NEW_RELEASE_PUBLISHED}"
+          new_tag="${NEW_RELEASE_GIT_TAG}"
+
+          force_dispatch_lc=$(printf '%s' "${DISPATCH_FORCE}" | tr '[:upper:]' '[:lower:]')
+
+          should=false
+          tag=""
+
+          if [[ "${published}" == "true" && -n "${new_tag}" ]]; then
+            should=true
+            tag="${new_tag}"
+          elif [[ "${EVENT_NAME}" == "push" ]] && [[ "${RUN_ATTEMPT}" -gt 1 ]]; then
+            # Re-run workflow after semantic-release already tagged HEAD (GoReleaser failed).
+            # Avoid picking unrelated tags after no-op merges (nothing points-at HEAD).
+            head_sha="$(git rev-parse HEAD)"
+            tag="$(git tag -l 'v*' --points-at "${head_sha}" --sort=-version:refname | head -1 || true)"
+            if [[ -n "${tag}" ]]; then
+              should=true
+            fi
+          elif [[ "${EVENT_NAME}" == "workflow_dispatch" ]] && [[ "${force_dispatch_lc}" == "true" ]]; then
+            should=true
+            tag=$(git tag -l 'v*' --sort=-version:refname | head -1 || true)
+          fi
+
+          if [[ "${should}" != true ]]; then
+            echo "skip=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          if [[ -z "${tag}" ]]; then
+            echo "::error title=GoReleaser::No semver v* tag available on this checkout."
+            echo "skip=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          echo "skip=false" >> "${GITHUB_OUTPUT}"
+          echo "tag=${tag}" >> "${GITHUB_OUTPUT}"
+        env:
+          NEW_RELEASE_PUBLISHED: ${{ needs.semantic-release.outputs.new_release_published }}
+          NEW_RELEASE_GIT_TAG: ${{ needs.semantic-release.outputs.new_release_git_tag }}
+          EVENT_NAME: ${{ github.event_name }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          DISPATCH_FORCE: >-
+            ${{ github.event.inputs != null && github.event.inputs.force_goreleaser }}
+
+  goreleaser:
+    needs: [semantic-release, resolve-release-tag]
+    if: >-
+      ${{ 
+        needs.semantic-release.result == 'success'
+        && needs.resolve-release-tag.result == 'success'
+        && needs.resolve-release-tag.outputs.skip == 'false'
+      }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ needs.semantic-release.outputs.new_release_git_tag }}
+          ref: ${{ needs.resolve-release-tag.outputs.tag }}
 
       - uses: actions/setup-go@v5
         with:
