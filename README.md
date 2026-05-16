@@ -10,8 +10,8 @@ Requires the **[`jahnkelabs/homebrew-tap`](https://github.com/jahnkelabs/homebre
 
 ```bash
 brew tap jahnkelabs/tap
-brew install sage
-brew upgrade sage
+brew install jahnkelabs/tap/sage
+brew upgrade jahnkelabs/tap/sage
 ```
 
 ### Go toolchain
