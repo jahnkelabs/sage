@@ -10,11 +10,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const aliasLabelPrefix = "compose.alias."
+const aliasLabelPrefix = "sage.alias."
 
 type aliasEntry struct {
-	Service  string
-	RawCmd   string
+	Service string
+	RawCmd  string
 	Profiles []string
 }
 

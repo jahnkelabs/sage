@@ -3,8 +3,8 @@ services:
     profiles:
       - dev
     labels:
-      compose.alias.migrate: bundle exec rake db:migrate
-      compose.alias.test: bundle exec rspec
+      sage.alias.migrate: bundle exec rake db:migrate
+      sage.alias.test: bundle exec rspec
   worker:
     labels:
-      compose.alias.work: rake jobs:work
+      sage.alias.work: rake jobs:work

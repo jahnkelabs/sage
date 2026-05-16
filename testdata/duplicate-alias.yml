@@ -1,7 +1,7 @@
 services:
   api:
     labels:
-      compose.alias.same: echo api
+      sage.alias.same: echo api
   worker:
     labels:
-      compose.alias.same: echo worker
+      sage.alias.same: echo worker

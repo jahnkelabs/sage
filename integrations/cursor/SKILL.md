@@ -1,11 +1,11 @@
 ---
 name: sage-compose
-description: Use when working with the sage CLI for Docker Compose label-based aliases (compose.alias.*), sage --dry-run, or sage aliases --json.
+description: Use when working with the sage CLI for Docker Compose label-based aliases (sage.alias.*), sage --dry-run, or sage aliases --json.
 ---
 
 # sage (Docker Compose aliases)
 
-`sage` wraps Docker Compose: familiar verbs pass through unchanged; shortcuts come from compose **service labels** `compose.alias.<name>`.
+`sage` wraps Docker Compose: familiar verbs pass through unchanged; shortcuts come from compose **service labels** `sage.alias.<name>`.
 
 ## Discovery (do this first in a repo)
 

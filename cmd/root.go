@@ -136,7 +136,7 @@ func runAlias(ctx context.Context, ae aliasEntry, extra []string) error {
 
 func appendAliasesHelp(out io.Writer, loadedErr error) {
 	fmt.Fprintln(out, "")
-	fmt.Fprintln(out, "Aliases (compose.alias.* labels from merged compose config):")
+	fmt.Fprintln(out, "Aliases (sage.alias.* labels from merged compose config):")
 	if loadedErr != nil {
 		fmt.Fprintf(out, "  unavailable (%v)\n", loadedErr)
 		return
@@ -179,7 +179,7 @@ func newRootCmd(version, commit, date string) *cobra.Command {
 		Short: "Docker Compose helper with label-defined command aliases",
 		Long: strings.TrimSpace(`
 sage forwards familiar docker compose verbs unchanged, and expands shortcuts declared as
-compose service labels of the form compose.alias.<name>.
+compose service labels of the form sage.alias.<name>.
 
 Examples:
   sage up -d
@@ -263,7 +263,7 @@ Examples:
 
 	aliasesCmd := &cobra.Command{
 		Use:   "aliases",
-		Short: "List discovered compose.alias.* aliases",
+		Short: "List discovered sage.alias.* aliases",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 			if ctx == nil {
