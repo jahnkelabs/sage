@@ -22,7 +22,24 @@ See [`RELEASING.md`](RELEASING.md). **`feat`** and **`fix`** bumps trigger semve
 
 ## Development
 
+With Go installed locally:
+
 ```bash
 go test ./...
 go build -o sage .
 ```
+
+Without local Go (Docker only):
+
+```bash
+docker compose run --rm dev go test ./...
+docker compose run --rm dev go build -o sage .
+```
+
+Or use the Makefile wrappers: `make test`, `make build`, `make tidy`, `make shell`.
+
+## Testing
+
+CLI behavior is covered by **contract tests** in [`cmd/cli_contract_test.go`](cmd/cli_contract_test.go): they build the real `sage` binary and invoke it via subprocess, asserting exit code and stdout/stderr—the same path users get from the shell. Other tests in `cmd/` cover pure helpers (alias YAML parsing, env substitution) and help output.
+
+When you change compose passthrough, flag parsing, or dry-run output, add or extend a table row in `cli_contract_test.go` rather than calling internal functions like `forwardCompose` directly.

@@ -169,6 +169,7 @@ func appendAliasesHelp(out io.Writer, loadedErr error) {
 func Execute(version, commit, date string) {
 	rootCmd := newRootCmd(version, commit, date)
 	if err := rootCmd.ExecuteContext(context.Background()); err != nil {
+		fmt.Fprintf(os.Stderr, "sage: %v\n", err)
 		os.Exit(1)
 	}
 }
@@ -326,6 +327,10 @@ Examples:
 	}
 
 	rootCmd.AddCommand(aliasesCmd, completionCmd)
+
+	// Compose flags (e.g. up -d, logs -f) must follow the verb; only sage flags before it.
+	rootCmd.PersistentFlags().SetInterspersed(false)
+	rootCmd.Flags().SetInterspersed(false)
 
 	return rootCmd
 }
