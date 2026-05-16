@@ -9,8 +9,8 @@ description: Use when working with the sage CLI for Docker Compose label-based a
 
 ## Install
 
-- **Homebrew**: `brew tap devenjahnke/tap && brew install sage` (requires [`homebrew-tap`](https://github.com/devenjahnke/homebrew-tap)).
-- **Go**: `go install github.com/devenjahnke/sage@latest`
+- **Homebrew**: `brew tap jahnkelabs/tap && brew install sage` (requires [`homebrew-tap`](https://github.com/jahnkelabs/homebrew-tap)).
+- **Go**: `go install github.com/jahnkelabs/sage@latest`
 
 ## Discovery (do this first in a repo)
 

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/devenjahnke/sage/cmd"
+	"github.com/jahnkelabs/sage/cmd"
 )
 
 var (

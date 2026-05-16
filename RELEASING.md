@@ -25,26 +25,52 @@ GoReleaser must attach artifacts to the **existing** release for the tag (defaul
 
 ## Homebrew tap
 
-Formula repo: **`github.com/devenjahnke/homebrew-tap`**.
+Formula repo: **`github.com/jahnkelabs/homebrew-tap`**.
 
 Users install with:
 
 ```bash
-brew tap devenjahnke/tap
+brew tap jahnkelabs/tap
 brew install sage
 brew upgrade sage
 ```
 
-### One-time setup
+### Organization migration (completed when these land on GitHub)
 
-1. Create the GitHub repo **`devenjahnke/homebrew-tap`** (see [`packaging/homebrew-tap/README.md`](packaging/homebrew-tap/README.md) for suggested README contents).
-2. In **`devenjahnke/sage`** GitHub settings → **Secrets and variables → Actions**, add **`TAP_GITHUB_TOKEN`**:
+Repositories live under **`jahnkelabs`**: **`jahnkelabs/sage`** and **`jahnkelabs/homebrew-tap`**. After a transfer, update your local clone:
 
-   - Fine-grained PAT: **Contents: Read and write** on **`homebrew-tap`** only (and metadata read on **`sage`** if needed for cross-repo workflows—or use classic PAT with `repo` scope on both).
+```bash
+git remote set-url origin https://github.com/jahnkelabs/sage.git
+```
 
-The default **`GITHUB_TOKEN`** in Actions **cannot** push to another repository; GoReleaser needs **`TAP_GITHUB_TOKEN`** to commit `Formula/sage.rb`.
+### One-time setup: GitHub App + organization secrets
+
+Cross-repo formula commits use a **GitHub App installation token** minted in Actions ([`actions/create-github-app-token`](https://github.com/actions/create-github-app-token)), not the default **`GITHUB_TOKEN`**, and not a long-lived PAT.
+
+1. **Create a GitHub App** (recommended: owned by **`jahnkelabs`** org; follow org policy).
+2. Grant the app repository permission **Contents: Read and write** (and **Metadata** read-only as required by GitHub).
+3. **Install** the app on **`jahnkelabs`** and allow it to access **`homebrew-tap`** only (least privilege).
+4. Note the **App ID** and generate a **private key** (PEM) from the App settings.
+5. In the org: **Settings → Secrets and variables → Actions** (organization level), create:
+   - **`GH_APP_ID`** — the numeric App ID (stored as an organization secret).
+   - **`GH_APP_PRIVATE_KEY`** — full PEM contents.
+
+   Under **Repository access** for each secret, choose **Selected repositories** and include **`jahnkelabs/sage`** so workflow runs there can read them.
+
+   Org owners can also use the CLI (repo slug is **`sage`** within **`jahnkelabs`**):
+
+   ```bash
+   gh secret set GH_APP_ID --org jahnkelabs --repos sage --body "$GH_APP_ID"
+   gh secret set GH_APP_PRIVATE_KEY --org jahnkelabs --repos sage < path/to/app-private-key.pem
+   ```
+
+The GoReleaser workflow passes the minted token to GoReleaser as **`TAP_GITHUB_TOKEN`** (see [`.goreleaser.yml`](.goreleaser.yml)).
 
 If **`main`** uses **branch protection**, allow **`GITHUB_TOKEN`/Actions** (or an appropriate bypass actor) to **push tags** and publish releases—or semantic-release will fail when creating **`v*`** tags.
+
+### Legacy PAT (discouraged)
+
+If you temporarily used a **`TAP_GITHUB_TOKEN`** repository secret (fine-grained or classic PAT), remove it once the GitHub App path works—the workflow no longer reads **`secrets.TAP_GITHUB_TOKEN`**.
 
 ### First formula
 

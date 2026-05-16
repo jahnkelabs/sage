@@ -35,15 +35,12 @@ checksum:
 
 brews:
   - name: sage
-    homepage: https://github.com/devenjahnke/sage
+    homepage: https://github.com/jahnkelabs/sage
     description: Docker Compose helper with sage.alias.* label shortcuts
     license: MIT
     repository:
-      owner: devenjahnke
+      owner: jahnkelabs
       name: homebrew-tap
       branch: main
       token: "{{ .Env.TAP_GITHUB_TOKEN }}"
     commit_msg_template: "brew: bump sage to {{ .Tag }}"
-    commit_author:
-      name: github-actions[bot]
-      email: github-actions[bot]@users.noreply.github.com
