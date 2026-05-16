@@ -58,6 +58,23 @@ sage [flags] <compose verb | alias> [args...]
 
 - `sage aliases` — tabular list; `--json` for machines / agents.
 - `sage completion <bash|zsh|fish>` — shell completion scripts.
+- `sage install` — install agent integrations into your user config (see below).
+
+### Agent integrations (Cursor)
+
+Install an always-on Cursor user rule that tells agents to prefer `sage` for Docker Compose and to discover `sage.alias.*` shortcuts before inventing commands:
+
+```bash
+sage install
+```
+
+Non-interactive (CI or scripts):
+
+```bash
+sage install --targets cursor
+```
+
+This writes `~/.cursor/rules/sage-compose.mdc`. Re-run after upgrading `sage` to refresh the rule; use `--force` to overwrite an existing file. Confirm in **Cursor Settings → Rules** that `sage-compose` shows **Always Apply**.
 
 ### Agent / CI
 

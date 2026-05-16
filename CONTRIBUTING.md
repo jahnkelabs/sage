@@ -22,6 +22,8 @@ See [`RELEASING.md`](RELEASING.md). **`feat`** and **`fix`** bumps trigger semve
 
 ## Development
 
+See [`AGENTS.md`](AGENTS.md) for agent-oriented notes (including using the `dev` container when Go is not on the host).
+
 With Go installed locally:
 
 ```bash

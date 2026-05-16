@@ -1,0 +1,42 @@
+---
+description: Use sage for Docker Compose and sage.alias.* shortcuts; discover aliases before inventing commands
+alwaysApply: true
+---
+
+# sage (Docker Compose)
+
+`sage` wraps Docker Compose: familiar verbs pass through unchanged; shortcuts come from compose **service labels** `sage.alias.<name>`.
+
+## Default to sage
+
+Use **`sage`** for compose operations (`up`, `down`, `ps`, `logs`, `run`, `build`, etc.) from the **project root** where compose files live. Do not invoke `docker compose` or `docker-compose` directly unless the user explicitly asks.
+
+## Discover before inventing commands
+
+1. Run `sage --help` for globals plus an **Aliases** table (when compose config loads).
+2. Run `sage aliases --json` for a stable list (`alias`, `service`, `command`).
+
+If Docker or compose config is unavailable, help may still print but aliases show as unavailable—**do not invent alias names**.
+
+## Prefer aliases
+
+When a task matches a discovered `sage.alias.*` shortcut, use it (e.g. `sage migrate`) instead of hand-building `docker compose run …`.
+
+Routing: known compose verbs forward to compose; a matching alias runs `docker compose run --rm` (+ `-it` unless `SAGE_NO_TTY`) with the label command argv (after host env substitution).
+
+## Safe inspection
+
+Prefer `sage --dry-run <verb-or-alias> …` to print the exact downstream argv before suggesting destructive compose commands.
+
+## Flags and environment
+
+- **`--file`**: repeatable compose files (no short `-f`, so `logs -f` keeps working).
+- **`--project-name` / `-p`**: compose project name.
+- **`SAGE_NO_TTY`**: set to `1` / `true` / `yes` for non-interactive runs (CI and agents).
+- **`SAGE_COMPOSE_CONFIG_DUMP`**: path to merged compose YAML when no working compose daemon (tests / CI).
+
+Label commands expand `$VAR` / `${VAR}` from the **host** environment before splitting into argv; missing vars warn and become empty strings.
+
+## Name collision
+
+Some systems ship another `sage` binary (e.g. SageMath). Run `which sage` if commands behave unexpectedly.

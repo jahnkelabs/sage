@@ -326,7 +326,7 @@ Examples:
 		},
 	}
 
-	rootCmd.AddCommand(aliasesCmd, completionCmd)
+	rootCmd.AddCommand(aliasesCmd, completionCmd, newInstallCmd())
 
 	// Compose flags (e.g. up -d, logs -f) must follow the verb; only sage flags before it.
 	rootCmd.PersistentFlags().SetInterspersed(false)
