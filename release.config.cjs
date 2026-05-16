@@ -16,6 +16,12 @@ module.exports = {
       },
     ],
     "@semantic-release/release-notes-generator",
-    "@semantic-release/github",
+    [
+      "@semantic-release/github",
+      {
+        // Draft until GoReleaser uploads assets; avoids immutable-release 422 on publish.
+        draftRelease: true,
+      },
+    ],
   ],
 };

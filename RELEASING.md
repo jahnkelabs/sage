@@ -23,7 +23,31 @@ If **`main`** only receives **`chore`** commits since the last tag, semantic-rel
 3. **Re-runs** (**Actions → Re-run workflow / jobs** on the same **`push`** run): when **`run_attempt`** is greater than **`1`**, GoReleaser runs only if a semver **`v*`** tag points at the workflow’s **`HEAD`** (recovery after **`goreleaser`** failed once **`semantic-release`** already tagged that commit; no-op chores without a release stay skipped).
 4. **`workflow_dispatch`**: pick **`main`** (full **`semantic-release` + conditional GoReleaser**) or any **`refs/tags/v*`** tag (GoReleaser-only). GitHub still shows every branch in the picker, but **`assert-dispatch-ref`** fails fast if you choose anything besides **`main`** or a **`v*`** release tag—other branches/tags are unsupported.
 
-GoReleaser must attach artifacts to the **existing** GitHub Release for that tag (**`release --clean`**).
+GoReleaser must attach artifacts to the **existing** GitHub Release for that tag (**`release --clean`**). semantic-release creates that release as a **draft** ([`release.config.cjs`](release.config.cjs) `draftRelease: true`) so GoReleaser can upload assets before the release is published.
+
+## Recovery
+
+### semantic-release OK, GoReleaser failed
+
+Typical symptom: tag and GitHub Release exist, but the Release workflow failed in **`goreleaser`** (e.g. `422 Cannot upload assets to an immutable release`).
+
+1. **Do not delete the git tag** while a published release still references it.
+2. **Re-run** via **Actions → Release → Run workflow** and select the existing **`refs/tags/vX.Y.Z`** ref (GoReleaser-only). Do not re-run on **`main`** unless you intend a new semver bump.
+3. If the release is published/immutable and uploads still fail, delete the **GitHub Release** (not necessarily the tag), fix config, and dispatch on the tag again.
+
+### Skipping a burned tag (e.g. v1.0.3)
+
+If a tag name cannot be recreated (GH013 / [immutable releases](https://docs.github.com/en/code-security/concepts/supply-chain-security/immutable-releases) after a published release was deleted), ship the same commit under the next patch:
+
+```bash
+git tag v1.0.4 <commit-sha>
+git push origin v1.0.4
+gh workflow run release.yml --repo jahnkelabs/sage --ref v1.0.4
+```
+
+### Broken state: release without tag (or vice versa)
+
+Avoid re-running **`main`** while a release exists for a version whose git tag was deleted—that often fails on `git push --tags`. Delete stray draft releases, restore or bump the tag, then use **tag dispatch** as above.
 
 ## Homebrew tap
 
