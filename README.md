@@ -36,6 +36,8 @@ cd sage
 go build -o sage .
 ```
 
+Without a local Go toolchain, use Docker Compose: `make build` or `docker compose run --rm dev go build -o sage .` (see [`CONTRIBUTING.md`](CONTRIBUTING.md)).
+
 ## Contributing & releases
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) (PR titles: **`feat`**, **`fix`**, **`chore`** only; squash merge). Maintainer release mechanics (semantic versioning, GitHub App / Homebrew tap): [`RELEASING.md`](RELEASING.md).
