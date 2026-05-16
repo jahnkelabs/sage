@@ -12,6 +12,9 @@ permissions:
 jobs:
   semantic-release:
     runs-on: ubuntu-latest
+    outputs:
+      new_release_published: ${{ steps.semantic.outputs.new_release_published }}
+      new_release_git_tag: ${{ steps.semantic.outputs.new_release_git_tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -34,7 +37,43 @@ jobs:
       - run: npm ci
 
       - uses: cycjimmy/semantic-release-action@v4
+        id: semantic
         with:
           semantic_version: 24
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Pushes/tags created via GITHUB_TOKEN do not trigger other workflows — so we
+  # cannot rely on `.github/workflows/goreleaser.yml`'s tag push listener alone.
+  goreleaser:
+    needs: semantic-release
+    if: ${{ needs.semantic-release.outputs.new_release_published == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.semantic-release.outputs.new_release_git_tag }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - uses: actions/create-github-app-token@v2
+        id: tap-token
+        with:
+          app-id: ${{ vars.HOMEBREW_TAP_GH_APP_ID }}
+          private-key: ${{ secrets.HOMEBREW_TAP_GH_APP_SECRET_KEY }}
+          owner: jahnkelabs
+          repositories: |
+            homebrew-tap
+          permission-contents: write
+
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAP_GITHUB_TOKEN: ${{ steps.tap-token.outputs.token }}
