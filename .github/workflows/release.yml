@@ -15,9 +15,37 @@ permissions:
   pull-requests: write
 
 jobs:
+  assert-dispatch-ref:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Disallow unsupported manual refs (UI still lists all refs)
+        run: |
+          set -euo pipefail
+          if [[ "${EVENT_NAME}" != "workflow_dispatch" ]]; then
+            exit 0
+          fi
+
+          if [[ "${GIT_REF}" == "refs/heads/main" ]]; then
+            exit 0
+          fi
+
+          if [[ "${GIT_REF}" != refs/tags/v* ]]; then
+            echo "::error title=Manual run::Use branch \`main\` or a release tag (\`refs/tags/v…\`). Other refs are refused."
+            exit 1
+          fi
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          GIT_REF: ${{ github.ref }}
+
   semantic-release:
+    needs: assert-dispatch-ref
     # Run only on branch `main`; skip when you manually run this workflow against a release tag ref.
-    if: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
+    if: >-
+      ${{
+        needs.assert-dispatch-ref.result == 'success'
+        && github.ref == 'refs/heads/main'
+        && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+      }}
     runs-on: ubuntu-latest
     outputs:
       new_release_published: ${{ steps.semantic.outputs.new_release_published }}
@@ -53,16 +81,19 @@ jobs:
   # Semantic-release creates tags/releases with GITHUB_TOKEN, which does not
   # reliably trigger separate workflows — GoReleaser runs here instead.
   resolve-release-tag:
-    needs: semantic-release
+    needs:
+      - assert-dispatch-ref
+      - semantic-release
     # Run after a successful `main` semantics pass, OR when Actions dispatches against `refs/tags/v*`.
     if: >-
-      ${{
-        always()
-        && !cancelled()
-        && (
-             (github.event_name == 'workflow_dispatch' && startsWith(github.ref, 'refs/tags/v'))
-          || needs.semantic-release.result == 'success'
-        )
+      ${{ 
+        always() 
+        && !cancelled() 
+        && needs.assert-dispatch-ref.result == 'success'
+        && ( 
+             (github.event_name == 'workflow_dispatch' && startsWith(github.ref, 'refs/tags/v')) 
+          || needs.semantic-release.result == 'success' 
+        ) 
       }}
     runs-on: ubuntu-latest
     outputs:
@@ -123,13 +154,17 @@ jobs:
           RUN_ATTEMPT: ${{ github.run_attempt }}
 
   goreleaser:
-    needs: [semantic-release, resolve-release-tag]
+    needs:
+      - assert-dispatch-ref
+      - semantic-release
+      - resolve-release-tag
     if: >-
-      ${{
-        always()
-        && !cancelled()
-        && needs.resolve-release-tag.result == 'success'
-        && needs.resolve-release-tag.outputs.skip == 'false'
+      ${{ 
+        always() 
+        && !cancelled() 
+        && needs.assert-dispatch-ref.result == 'success'
+        && needs.resolve-release-tag.result == 'success' 
+        && needs.resolve-release-tag.outputs.skip == 'false' 
         && (needs.semantic-release.result == 'success'
             || needs.semantic-release.result == 'skipped')
       }}
