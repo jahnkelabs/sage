@@ -115,3 +115,77 @@ func TestCLIParseError_unknownFlag(t *testing.T) {
 		t.Fatalf("stderr missing sage error prefix: %q", stderr)
 	}
 }
+
+func TestCLIInstall_cursorRule(t *testing.T) {
+	home := t.TempDir()
+	stdout, stderr, code := runSage(t, "", "install", "--targets", "cursor", "--home", home)
+	if code != 0 {
+		t.Fatalf("exit %d stderr=%q stdout=%q", code, stderr, stdout)
+	}
+	if !strings.Contains(stdout, "installed") {
+		t.Fatalf("stdout missing installed: %q", stdout)
+	}
+
+	rulePath := filepath.Join(home, ".cursor", "rules", "sage-compose.mdc")
+	data, err := os.ReadFile(rulePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := string(data)
+	for _, want := range []string{
+		"alwaysApply: true",
+		"sage aliases --json",
+		"docker compose",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("rule missing %q:\n%s", want, body)
+		}
+	}
+}
+
+func TestCLIInstall_skipWithoutForce(t *testing.T) {
+	home := t.TempDir()
+	_, _, code := runSage(t, "", "install", "--targets", "cursor", "--home", home)
+	if code != 0 {
+		t.Fatalf("first install exit %d", code)
+	}
+	stdout, stderr, code := runSage(t, "", "install", "--targets", "cursor", "--home", home)
+	if code != 0 {
+		t.Fatalf("second install exit %d stderr=%q", code, stderr)
+	}
+	if !strings.Contains(stdout, "skipped") {
+		t.Fatalf("stdout missing skipped: %q", stdout)
+	}
+}
+
+func TestCLIInstall_forceOverwrite(t *testing.T) {
+	home := t.TempDir()
+	_, _, code := runSage(t, "", "install", "--targets", "cursor", "--home", home)
+	if code != 0 {
+		t.Fatalf("first install exit %d", code)
+	}
+	stdout, stderr, code := runSage(t, "", "install", "--targets", "cursor", "--home", home, "--force")
+	if code != 0 {
+		t.Fatalf("force install exit %d stderr=%q", code, stderr)
+	}
+	if !strings.Contains(stdout, "installed") {
+		t.Fatalf("stdout missing installed: %q", stdout)
+	}
+}
+
+func TestCLIInstall_nonInteractiveRequiresTargets(t *testing.T) {
+	home := t.TempDir()
+	cmd := exec.Command(sageTestBin, "install", "--home", home)
+	cmd.Stdin = strings.NewReader("")
+	var outBuf, errBuf bytes.Buffer
+	cmd.Stdout = &outBuf
+	cmd.Stderr = &errBuf
+	err := cmd.Run()
+	if err == nil {
+		t.Fatal("expected non-zero exit")
+	}
+	combined := outBuf.String() + errBuf.String()
+	if !strings.Contains(combined, "--targets cursor") {
+		t.Fatalf("missing usage hint: %q", combined)
+	}
+}
