@@ -1,0 +1,31 @@
+---
+description: Run Go toolchain commands via the dev Compose service, not on the host
+alwaysApply: true
+---
+
+# Go via `dev` container
+
+This repo does not assume `go` on the host PATH. **Always** run Go through the **`dev`** service in [`docker-compose.yml`](docker-compose.yml) (Go 1.22, project mounted at `/src`).
+
+## Commands
+
+From the repository root:
+
+```bash
+docker compose run --rm dev go test ./...
+docker compose run --rm dev go build -o sage .
+docker compose run --rm dev go mod tidy
+```
+
+Prefer Makefile wrappers when they match the task: `make test`, `make build`, `make tidy`.
+
+For non-interactive agent/CI runs, set `SAGE_NO_TTY=1` on compose invocations if TTY allocation causes issues.
+
+## Do not
+
+- Run bare `go test`, `go build`, `go mod`, etc. on the host.
+- Assume a local Go version matches the project (use the container).
+
+## Contract tests
+
+CLI tests in [`cmd/cli_contract_test.go`](cmd/cli_contract_test.go) build and invoke the `sage` binary via subprocess. Run the full suite with `make test` or `docker compose run --rm dev go test ./...`.

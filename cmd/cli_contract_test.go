@@ -105,6 +105,39 @@ func TestCLIPassthrough_dryRun(t *testing.T) {
 	}
 }
 
+func TestCLIAlias_dryRun(t *testing.T) {
+	dir := t.TempDir()
+	dump, err := filepath.Abs(filepath.Join("..", "testdata", "merged-compose-example.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("SAGE_COMPOSE_CONFIG_DUMP", dump)
+
+	stdout, stderr, code := runSage(t, dir, "--dry-run", "migrate")
+	if code != 0 {
+		t.Fatalf("exit %d stderr=%q stdout=%q", code, stderr, stdout)
+	}
+	if stderr != "" {
+		t.Fatalf("unexpected stderr: %q", stderr)
+	}
+	if !strings.Contains(stdout, "sage --dry-run would execute:") {
+		t.Fatalf("missing dry-run header:\n%s", stdout)
+	}
+	for _, frag := range []string{
+		"run",
+		"--remove-orphans",
+		"--rm",
+		"api",
+		"--profile",
+		"dev",
+		"bundle exec rake db:migrate",
+	} {
+		if !strings.Contains(stdout, frag) {
+			t.Fatalf("stdout missing %q:\n%s", frag, stdout)
+		}
+	}
+}
+
 func TestCLIParseError_unknownFlag(t *testing.T) {
 	dir := t.TempDir()
 	_, stderr, code := runSage(t, dir, "--not-a-flag", "up")

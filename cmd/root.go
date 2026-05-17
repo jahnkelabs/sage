@@ -117,7 +117,7 @@ func runAlias(ctx context.Context, ae aliasEntry, extra []string) error {
 	if !skipTTYForCompose() {
 		runArgs = append(runArgs, "-it")
 	}
-	runArgs = append(runArgs, "--rm", ae.Service)
+	runArgs = append(runArgs, "--rm", "--remove-orphans", ae.Service)
 	runArgs = append(runArgs, parts...)
 	runArgs = append(runArgs, extra...)
 
