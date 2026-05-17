@@ -22,7 +22,7 @@ If Docker or compose config is unavailable, help may still print but aliases sho
 
 When a task matches a discovered `sage.alias.*` shortcut, use it (e.g. `sage migrate`) instead of hand-building `docker compose run …`.
 
-Routing: known compose verbs forward to compose; a matching alias runs `docker compose run --rm` (+ `-it` unless `SAGE_NO_TTY`) with the label command argv (after host env substitution).
+Routing: known compose verbs forward to compose; a matching alias runs `docker compose run --rm --remove-orphans` (+ `-it` unless `SAGE_NO_TTY`) with the label command argv (after host env substitution).
 
 ## Safe inspection
 

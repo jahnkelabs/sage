@@ -49,7 +49,7 @@ sage [flags] <compose verb | alias> [args...]
 ```
 
 - **Passthrough**: `sage up -d`, `sage logs -f api`, etc. behave like `docker compose …` (or `docker-compose` when that binary is present).
-- **Aliases**: labels on a service define extra “top-level” commands, e.g. `sage.alias.migrate: bundle exec rake db:migrate` → `sage migrate` runs `docker compose run --rm -it <service> bundle exec rake db:migrate` (profiles from the service are passed as `--profile` flags when present).
+- **Aliases**: labels on a service define extra “top-level” commands, e.g. `sage.alias.migrate: bundle exec rake db:migrate` → `sage migrate` runs `docker compose run --rm --remove-orphans -it <service> bundle exec rake db:migrate` (profiles from the service are passed as `--profile` flags when present).
 - **`--dry-run`**: prints the full `docker compose` / `docker-compose` argv that would run.
 - **`--file`**: repeat to pass multiple compose files. A **short `-f` is intentionally not used** so flags like `logs -f` keep working as in stock compose.
 - **`SAGE_NO_TTY`**: set to `1` / `true` to drop interactive TTY allocation (useful for CI and agents).
